@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Copy, Share2 } from "lucide-react";
 import confetti from "canvas-confetti";
+import { format } from "date-fns";
 import styles from "./AffirmationDisplay.module.css";
 
 interface AffirmationProps {
@@ -11,6 +12,7 @@ interface AffirmationProps {
 }
 
 export function AffirmationDisplay({ affirmation, isNew }: AffirmationProps) {
+    const today = format(new Date(), "d MMM");
     const [copied, setCopied] = useState(false);
 
     useEffect(() => {
@@ -19,7 +21,7 @@ export function AffirmationDisplay({ affirmation, isNew }: AffirmationProps) {
                 particleCount: 100,
                 spread: 70,
                 origin: { y: 0.6 },
-                colors: ["#8b5cf6", "#e2e8f0", "#ffffff"],
+                colors: ["#06b6d4", "#ecfeff", "#ffffff"],
             });
         }
     }, [isNew]);
@@ -44,9 +46,12 @@ export function AffirmationDisplay({ affirmation, isNew }: AffirmationProps) {
 
     return (
         <div className={styles.container}>
-            <h1 className={styles.title}>
-                Affirm Daily
-            </h1>
+            <div className="flex flex-col items-center mb-8">
+                <h1 className={styles.title}>
+                    Affirm Daily
+                </h1>
+                <p className={styles.date}>Today, {today}</p>
+            </div>
 
             <div className={styles.card}>
                 <blockquote className={styles.quote}>

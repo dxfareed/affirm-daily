@@ -57,7 +57,6 @@ export default function Home() {
     } catch (err) {
       console.error(err);
       setError("Failed to load your daily affirmation.");
-      // Fallback if API fails and we have nothing?
     } finally {
       setIsLoading(false);
     }
@@ -66,10 +65,6 @@ export default function Home() {
   useEffect(() => {
     const init = async () => {
       try {
-        // Wait for SDK ready ? 
-        // Note: rootProvider calls sdk.actions.ready(). 
-        // But we need to wait for auth.
-
         const res = await sdk.quickAuth.fetch("/api/me");
         if (res.ok) {
           const userData = await res.json();
@@ -83,8 +78,7 @@ export default function Home() {
 
       } catch (e) {
         console.error("Auth error", e);
-        // Fallback for dev mode/browser without Farcaster context?
-        // Remove this in prod, but for now:
+        // Fallback for dev mode
         const demoFid = 1;
         console.warn("Using demo FID 1 due to auth failure (Dev mode?)");
         setUser({ fid: demoFid });
@@ -113,7 +107,10 @@ export default function Home() {
 
   return (
     <main className={styles.main}>
-      {affirmation && <AffirmationDisplay affirmation={affirmation} isNew={isNew} />}
+      {/* Container z-index fix to sit above blobs */}
+      <div style={{ position: 'relative', zIndex: 1, width: '100%', display: 'flex', justifyContent: 'center' }}>
+        {affirmation && <AffirmationDisplay affirmation={affirmation} isNew={isNew} />}
+      </div>
     </main>
   );
 }

@@ -1,11 +1,55 @@
 .main {
   min-height: 100vh;
-  background: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 100%);
+  position: relative;
+  /* Soft, fluid background */
+  background: #f0fdf4;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
+}
+
+/* Decorative Blobs */
+.main::before,
+.main::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  z-index: 0;
+  opacity: 0.6;
+}
+
+.main::before {
+  width: 400px;
+  height: 400px;
+  background: #bbf7d0;
+  /* Green-200 */
+  top: -100px;
+  left: -100px;
+  animation: float 20s infinite alternate;
+}
+
+.main::after {
+  width: 300px;
+  height: 300px;
+  background: #86efac;
+  /* Green-300 */
+  bottom: -50px;
+  right: -50px;
+  animation: float 15s infinite alternate-reverse;
+}
+
+@keyframes float {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+
+  100% {
+    transform: translate(50px, 50px) rotate(20deg);
+  }
 }
 
 .loaderContainer {
@@ -14,7 +58,7 @@
   width: 100%;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 100%);
+  background: #f0fdf4;
 }
 
 .loader {
