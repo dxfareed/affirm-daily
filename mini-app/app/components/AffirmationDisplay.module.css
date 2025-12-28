@@ -1,0 +1,108 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.title {
+    font-size: 2.25rem;
+    line-height: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    letter-spacing: -0.025em;
+    background: linear-gradient(135deg, #e2e8f0 0%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 32rem;
+    width: 100%;
+    transition: transform 0.5s;
+}
+
+.card:hover {
+    transform: scale(1.02);
+}
+
+.quote {
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 500;
+    line-height: 1.625;
+    margin-bottom: 2rem;
+    color: white;
+}
+
+.actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.button {
+    padding: 0.75rem;
+    border-radius: 9999px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    color: rgba(255, 255, 255, 0.8);
+    transition: color 0.2s;
+}
+
+.button:hover .icon {
+    color: white;
+}
+
+.copied {
+    color: #4ade80 !important;
+    /* green-400 */
+}
+
+.footer {
+    margin-top: 2rem;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.875rem;
+}
+
+/* Responsive adjustments */
+@media (min-width: 768px) {
+    .title {
+        font-size: 2.5rem;
+        /* text-4xl approx */
+    }
+
+    .quote {
+        font-size: 1.875rem;
+        /* text-3xl approx */
+    }
+
+    .card {
+        padding: 3rem;
+    }
+}
