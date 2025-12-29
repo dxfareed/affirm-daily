@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Copy, Share2 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { format } from "date-fns";
+import { sdk } from "@farcaster/miniapp-sdk";
 import styles from "./AffirmationDisplay.module.css";
 
 interface AffirmationProps {
@@ -33,14 +34,18 @@ export function AffirmationDisplay({ affirmation, isNew }: AffirmationProps) {
     };
 
     const handleShare = () => {
-        if (navigator.share) {
-            navigator.share({
-                title: "Affirm Daily",
-                text: `"${affirmation}" - My daily affirmation.`,
-                url: window.location.href,
-            }).catch(console.error);
+        const shareText = `"${affirmation}" - My daily affirmation.`;
+        const shareUrl = `${window.location.origin}/share/${encodeURIComponent(affirmation)}`; // The embed
+
+        // Construct Warpcast compose URL with text and embeds
+        const encodedText = encodeURIComponent(shareText);
+        const encodedEmbed = encodeURIComponent(shareUrl);
+        const castUrl = `https://warpcast.com/~/compose?text=${encodedText}&embeds[]=${encodedEmbed}`;
+
+        if (sdk && sdk.actions && sdk.actions.openUrl) {
+            sdk.actions.openUrl(castUrl);
         } else {
-            handleCopy();
+            window.open(castUrl, "_blank");
         }
     };
 
