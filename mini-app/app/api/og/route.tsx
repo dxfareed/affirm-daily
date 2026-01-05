@@ -9,7 +9,18 @@ export async function GET(request: NextRequest) {
         const affirmation = searchParams.get('affirmation') || 'You are capable of amazing things.';
         const date = searchParams.get('date') || 'today';
 
-        console.log('[OG] Generating image for:', affirmation, date);
+        console.log('[OG] Generating styled image for:', affirmation, date);
+
+        // Load custom fonts from public directory
+        let appUrl = process.env.NEXT_PUBLIC_URL || process.env.VERCEL_URL || 'http://localhost:3000';
+        if (!appUrl.startsWith('http')) {
+            appUrl = `https://${appUrl}`;
+        }
+
+        const [turretRoadBold, spaceMonoRegular] = await Promise.all([
+            fetch(new URL(`${appUrl}/Space_Mono,Turret_Road/Turret_Road/TurretRoad-Bold.ttf`)).then((res) => res.arrayBuffer()),
+            fetch(new URL(`${appUrl}/Space_Mono,Turret_Road/Space_Mono/SpaceMono-Regular.ttf`)).then((res) => res.arrayBuffer()),
+        ]);
 
         return new ImageResponse(
             (
@@ -22,64 +33,110 @@ export async function GET(request: NextRequest) {
                         alignItems: 'center',
                         justifyContent: 'center',
                         backgroundColor: '#ecfeff',
-                        fontFamily: 'system-ui, sans-serif',
+                        position: 'relative',
                     }}
                 >
-                    {/* Title */}
+                    {/* Background blob - top left */}
+                    <div
+                        style={{
+                            display: 'flex',
+                            position: 'absolute',
+                            top: '-120px',
+                            left: '-120px',
+                            width: '450px',
+                            height: '450px',
+                            borderRadius: '50%',
+                            background: '#a5f3fc',
+                        }}
+                    />
+                    {/* Background blob - bottom right */}
+                    <div
+                        style={{
+                            display: 'flex',
+                            position: 'absolute',
+                            bottom: '-100px',
+                            right: '-100px',
+                            width: '380px',
+                            height: '380px',
+                            borderRadius: '50%',
+                            background: '#67e8f9',
+                        }}
+                    />
+
+                    {/* Main content */}
                     <div
                         style={{
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
-                            marginBottom: '30px',
-                        }}
-                    >
-                        <div
-                            style={{
-                                display: 'flex',
-                                fontSize: 60,
-                                fontWeight: 700,
-                                color: '#0891b2',
-                                marginBottom: '10px',
-                            }}
-                        >
-                            Affirm Daily
-                        </div>
-                        <div
-                            style={{
-                                display: 'flex',
-                                fontSize: 24,
-                                color: '#0e7490',
-                            }}
-                        >
-                            Today, {date}
-                        </div>
-                    </div>
-
-                    {/* Card */}
-                    <div
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
                             justifyContent: 'center',
-                            backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                            border: '2px solid rgba(6, 182, 212, 0.3)',
-                            borderRadius: '20px',
-                            padding: '40px 60px',
-                            maxWidth: '900px',
+                            zIndex: 10,
                         }}
                     >
+                        {/* Title section */}
                         <div
                             style={{
                                 display: 'flex',
-                                fontSize: 36,
-                                fontWeight: 400,
-                                color: '#164e63',
-                                textAlign: 'center',
-                                lineHeight: 1.4,
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                marginBottom: '40px',
                             }}
                         >
-                            &quot;{affirmation}&quot;
+                            {/* Affirm Daily title - matching gradient */}
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    fontFamily: '"Turret Road"',
+                                    fontSize: 80,
+                                    fontWeight: 700,
+                                    color: '#0891b2',
+                                    letterSpacing: '-0.02em',
+                                }}
+                            >
+                                Affirm Daily
+                            </div>
+                            {/* Date */}
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    fontFamily: '"Space Mono"',
+                                    fontSize: 26,
+                                    color: '#0e7490',
+                                    letterSpacing: '0.05em',
+                                    marginTop: '8px',
+                                }}
+                            >
+                                today, {date}
+                            </div>
+                        </div>
+
+                        {/* Glass Card - matching exact styles from CSS */}
+                        <div
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: 'rgba(255, 255, 255, 0.25)',
+                                border: '1px solid rgba(255, 255, 255, 0.6)',
+                                borderRadius: '24px',
+                                padding: '45px 60px',
+                                maxWidth: '900px',
+                                boxShadow: '0 8px 32px 0 rgba(6, 182, 212, 0.15)',
+                            }}
+                        >
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    fontFamily: '"Space Mono"',
+                                    fontSize: 38,
+                                    fontWeight: 500,
+                                    color: '#164e63',
+                                    textAlign: 'center',
+                                    lineHeight: 1.6,
+                                }}
+                            >
+                                &quot;{affirmation}&quot;
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -87,6 +144,20 @@ export async function GET(request: NextRequest) {
             {
                 width: 1200,
                 height: 630,
+                fonts: [
+                    {
+                        name: 'Turret Road',
+                        data: turretRoadBold,
+                        style: 'normal',
+                        weight: 700,
+                    },
+                    {
+                        name: 'Space Mono',
+                        data: spaceMonoRegular,
+                        style: 'normal',
+                        weight: 400,
+                    },
+                ],
             },
         );
     } catch (e: any) {
