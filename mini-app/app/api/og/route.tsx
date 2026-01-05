@@ -1,8 +1,7 @@
-
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
     try {
@@ -10,9 +9,7 @@ export async function GET(request: NextRequest) {
         const affirmation = searchParams.get('affirmation') || 'You are capable of amazing things.';
         const date = searchParams.get('date') || 'today';
 
-        // Load Fonts
-        const turretRoadBold = await fetch(new URL('../../../public/Space_Mono,Turret_Road/Turret_Road/TurretRoad-Bold.ttf', import.meta.url)).then((res) => res.arrayBuffer());
-        const spaceMonoRegular = await fetch(new URL('../../../public/Space_Mono,Turret_Road/Space_Mono/SpaceMono-Regular.ttf', import.meta.url)).then((res) => res.arrayBuffer());
+        console.log('[OG] Generating image for:', affirmation, date);
 
         return new ImageResponse(
             (
@@ -24,102 +21,65 @@ export async function GET(request: NextRequest) {
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backgroundColor: '#ecfeff', // Cyan-50
-                        position: 'relative',
+                        backgroundColor: '#ecfeff',
+                        fontFamily: 'system-ui, sans-serif',
                     }}
                 >
-                    {/* Decorative Blobs */}
-                    <div
-                        style={{
-                            position: 'absolute',
-                            top: '-150px',
-                            left: '-150px',
-                            width: '500px',
-                            height: '500px',
-                            borderRadius: '50%',
-                            background: '#a5f3fc', // Cyan-200
-                            filter: 'blur(80px)',
-                            opacity: 0.6,
-                        }}
-                    />
-                    <div
-                        style={{
-                            position: 'absolute',
-                            bottom: '-100px',
-                            right: '-100px',
-                            width: '400px',
-                            height: '400px',
-                            borderRadius: '50%',
-                            background: '#67e8f9', // Cyan-300
-                            filter: 'blur(80px)',
-                            opacity: 0.6,
-                        }}
-                    />
-
-                    {/* Container */}
+                    {/* Title */}
                     <div
                         style={{
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            zIndex: 10,
+                            marginBottom: '30px',
                         }}
                     >
-                        {/* Title */}
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '30px' }}>
-                            <div
-                                style={{
-                                    fontFamily: '"Turret Road"',
-                                    fontSize: 60,
-                                    fontWeight: 700,
-                                    backgroundImage: 'linear-gradient(135deg, #155e75 0%, #0891b2 100%)',
-                                    backgroundClip: 'text',
-                                    color: 'transparent',
-                                    marginBottom: '10px',
-                                }}
-                            >
-                                Affirm Daily
-                            </div>
-                            <div
-                                style={{
-                                    fontFamily: '"Space Mono"',
-                                    fontSize: 24,
-                                    color: '#0e7490',
-                                    opacity: 0.8,
-                                }}
-                            >
-                                Today, {date}
-                            </div>
-                        </div>
-
-                        {/* Card */}
                         <div
                             style={{
                                 display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                backgroundColor: 'rgba(255, 255, 255, 0.45)',
-                                border: '2px solid rgba(255, 255, 255, 0.8)',
-                                borderRadius: '40px',
-                                padding: '60px',
-                                width: '800px',
-                                boxShadow: '0 15px 50px rgba(6, 182, 212, 0.2)',
-                                textAlign: 'center',
+                                fontSize: 60,
+                                fontWeight: 700,
+                                color: '#0891b2',
+                                marginBottom: '10px',
                             }}
                         >
-                            <div
-                                style={{
-                                    fontFamily: '"Space Mono"',
-                                    fontSize: 40,
-                                    fontWeight: 400,
-                                    color: '#164e63',
-                                    textAlign: 'center',
-                                    lineHeight: 1.4,
-                                }}
-                            >
-                                "{affirmation}"
-                            </div>
+                            Affirm Daily
+                        </div>
+                        <div
+                            style={{
+                                display: 'flex',
+                                fontSize: 24,
+                                color: '#0e7490',
+                            }}
+                        >
+                            Today, {date}
+                        </div>
+                    </div>
+
+                    {/* Card */}
+                    <div
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                            border: '2px solid rgba(6, 182, 212, 0.3)',
+                            borderRadius: '20px',
+                            padding: '40px 60px',
+                            maxWidth: '900px',
+                        }}
+                    >
+                        <div
+                            style={{
+                                display: 'flex',
+                                fontSize: 36,
+                                fontWeight: 400,
+                                color: '#164e63',
+                                textAlign: 'center',
+                                lineHeight: 1.4,
+                            }}
+                        >
+                            &quot;{affirmation}&quot;
                         </div>
                     </div>
                 </div>
@@ -127,25 +87,12 @@ export async function GET(request: NextRequest) {
             {
                 width: 1200,
                 height: 630,
-                fonts: [
-                    {
-                        name: 'Turret Road',
-                        data: turretRoadBold,
-                        style: 'normal',
-                        weight: 700,
-                    },
-                    {
-                        name: 'Space Mono',
-                        data: spaceMonoRegular,
-                        style: 'normal',
-                        weight: 400,
-                    },
-                ],
             },
         );
     } catch (e: any) {
-        console.log(`${e.message}`);
-        return new Response(`Failed to generate the image`, {
+        console.error(`[OG] Error generating image: ${e.message}`);
+        console.error(e.stack);
+        return new Response(`Failed to generate the image: ${e.message}`, {
             status: 500,
         });
     }

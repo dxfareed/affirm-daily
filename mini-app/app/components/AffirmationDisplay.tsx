@@ -35,17 +35,22 @@ export function AffirmationDisplay({ affirmation, isNew }: AffirmationProps) {
 
     const handleShare = () => {
         const shareText = `"${affirmation}" - My daily affirmation.`;
-        const shareUrl = `${window.location.origin}/share/${encodeURIComponent(affirmation)}`; // The embed
 
-        // Construct Warpcast compose URL with text and embeds
-        const encodedText = encodeURIComponent(shareText);
-        const encodedEmbed = encodeURIComponent(shareUrl);
-        const castUrl = `https://warpcast.com/~/compose?text=${encodedText}&embeds[]=${encodedEmbed}`;
+        // Construct share URL using env var or fallback to origin
+        const appUrl = process.env.NEXT_PUBLIC_URL || window.location.origin;
+        const shareUrl = new URL(`${appUrl}/share`);
+        shareUrl.searchParams.set('affirmation', affirmation);
+        shareUrl.searchParams.set('date', today);
 
-        if (sdk && sdk.actions && sdk.actions.openUrl) {
-            sdk.actions.openUrl(castUrl);
-        } else {
-            window.open(castUrl, "_blank");
+        if (sdk && sdk.actions && sdk.actions.composeCast) {
+            try {
+                sdk.actions.composeCast({
+                    text: shareText,
+                    embeds: [shareUrl.toString()],
+                });
+            } catch (e) {
+                console.error("Error sharing:", e);
+            }
         }
     };
 
