@@ -36,7 +36,16 @@ affirm-daily/
     └── scripts/               # Deployment & utility scripts
 ```
 
-## 🚀 Getting Started
+## � Smart Contract Features (`DailyAffirmation.sol`)
+
+- **Daily Claims:** Enforces one claim per 24 hours per FID.
+- **Bot Prevention:** Requires `0.0000030 ETH` fee + Backend Signature verification.
+- **Rewards:**
+    - **ERC721 NFT:** Dynamic SVG image of the affirmation (stored securely on Pinata).
+    - **ERC20 Token:** Reward tokens sent directly to user wallet.
+- **Admin:** Fee management and emergency rescue functions.
+
+## �🚀 Getting Started
 
 ### Prerequisites
 
@@ -69,6 +78,12 @@ affirm-daily/
    NEXT_PUBLIC_HEADER=your_header
    NEXT_PUBLIC_PAYLOAD=your_payload
    NEXT_PUBLIC_SIGNATURE=your_signature
+
+   # Backend Signer & Pinata (For Daily Affirmation NFT)
+   NEXT_PUBLIC_DAILY_AFFIRMATION_ADDRESS=0x...
+   SIGNER_PRIVATE_KEY=your_private_key
+   PINATA_API_KEY=your_key
+   PINATA_SECRET_API_KEY=your_secret
    ```
 
 4. **Run the development server:**
@@ -105,7 +120,7 @@ affirm-daily/
 
 5. **Deploy:**
    ```bash
-   npx hardhat run scripts/deploy.ts --network base
+   npx hardhat run scripts/deployDailyAffirmation.ts --network base
    ```
 
 ## ⚙️ How It Works
@@ -132,6 +147,17 @@ affirm-daily/
    - Dynamic OG image from `/api/og`
    - Interactive "Open Affirm Daily" button
 4. When posted, the Frame shows the beautiful affirmation card
+
+### Claiming Flow (NFT + Tokens)
+1. **Auth:** User authenticates via Farcaster Quick Auth.
+2. **Request:** Frontend sends data to `/api/claim/signature`.
+3. **Backend Logic:**
+   - Verifies Farcaster Session.
+   - Generates an **SVG image** of the affirmation.
+   - Uploads Image & Metadata to **Pinata** (IPFS).
+   - Signs the data (`fid`, `recipient`, `deadline`, `tokenURI`) with `SIGNER_PRIVATE_KEY`.
+4. **On-Chain:** User calls `claim(...)` on `DailyAffirmation.sol` with the signature and fee.
+5. **Result:** User receives the NFT and Reward Tokens.
 
 ## 🎨 Design System
 
