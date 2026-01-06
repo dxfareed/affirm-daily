@@ -9,7 +9,7 @@ export const runtime = 'edge';
 export async function generateMetadata(props: { searchParams: Promise<any> }): Promise<Metadata> {
     const searchParams = await props.searchParams;
     const affirmation = searchParams.affirmation;
-    const date = format(new Date(), "d MMM");
+    const date = searchParams.date || format(new Date(), "d MMM");
 
     let appUrl = process.env.NEXT_PUBLIC_URL || process.env.VERCEL_URL || 'http://localhost:3000';
     if (!appUrl.startsWith('http')) {
@@ -19,6 +19,7 @@ export async function generateMetadata(props: { searchParams: Promise<any> }): P
     const params = new URLSearchParams();
     if (affirmation) params.append('affirmation', affirmation);
     params.append('date', date);
+    params.append('v', '2');
 
     const frameImageUrl = `${appUrl}/api/og?${params.toString()}`;
     console.log('[SharePage] Generated OG Image URL:', frameImageUrl);

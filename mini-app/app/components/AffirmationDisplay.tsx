@@ -54,6 +54,14 @@ export function AffirmationDisplay({ affirmation, isNew }: AffirmationProps) {
         }
     };
 
+    // Construct OG URL for preloading (use URLSearchParams to match server encoding and ensure cache hit)
+    const appUrl = process.env.NEXT_PUBLIC_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+    const ogParams = new URLSearchParams();
+    ogParams.append('affirmation', affirmation);
+    ogParams.append('date', today);
+    ogParams.append('v', '2');
+    const ogUrl = `${appUrl}/api/og?${ogParams.toString()}`;
+
     return (
         <div className={styles.container}>
             <div className="flex flex-col items-center mb-8">
@@ -90,6 +98,16 @@ export function AffirmationDisplay({ affirmation, isNew }: AffirmationProps) {
             <p className={styles.footer}>
                 Check back in 24 hours for a new affirmation.
             </p>
+
+            {/* Hidden image to preload/warm the OG image cache */}
+            <img
+                src={ogUrl}
+                alt=""
+                width="0"
+                height="0"
+                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
+                aria-hidden="true"
+            />
         </div>
     );
 }
