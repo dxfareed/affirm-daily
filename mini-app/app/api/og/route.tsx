@@ -2,10 +2,19 @@ import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { TURRET_ROAD_BOLD_BASE64, SPACE_MONO_REGULAR_BASE64 } from './fonts';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
-const turretRoadFontData = Buffer.from(TURRET_ROAD_BOLD_BASE64, 'base64');
-const spaceMonoFontData = Buffer.from(SPACE_MONO_REGULAR_BASE64, 'base64');
+function toArrayBuffer(base64: string) {
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+}
+
+const turretRoadFontData = toArrayBuffer(TURRET_ROAD_BOLD_BASE64);
+const spaceMonoFontData = toArrayBuffer(SPACE_MONO_REGULAR_BASE64);
 
 export async function GET(request: NextRequest) {
     try {

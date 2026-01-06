@@ -15,11 +15,12 @@ export async function generateMetadata(props: { searchParams: Promise<any> }): P
     if (!appUrl.startsWith('http')) {
         appUrl = `https://${appUrl}`;
     }
+    appUrl = appUrl.replace(/\/$/, '');
 
     const params = new URLSearchParams();
     if (affirmation) params.append('affirmation', affirmation);
     params.append('date', date);
-    params.append('v', '2');
+    params.append('v', '3');
 
     const frameImageUrl = `${appUrl}/api/og?${params.toString()}`;
     console.log('[SharePage] Generated OG Image URL:', frameImageUrl);

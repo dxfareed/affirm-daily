@@ -55,11 +55,12 @@ export function AffirmationDisplay({ affirmation, isNew }: AffirmationProps) {
     };
 
     // Construct OG URL for preloading (use URLSearchParams to match server encoding and ensure cache hit)
-    const appUrl = process.env.NEXT_PUBLIC_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+    let appUrl = process.env.NEXT_PUBLIC_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+    appUrl = appUrl.replace(/\/$/, ''); // Remove trailing slash if present
     const ogParams = new URLSearchParams();
     ogParams.append('affirmation', affirmation);
     ogParams.append('date', today);
-    ogParams.append('v', '2');
+    ogParams.append('v', '3');
     const ogUrl = `${appUrl}/api/og?${ogParams.toString()}`;
 
     return (
