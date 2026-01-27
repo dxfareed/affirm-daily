@@ -9,18 +9,12 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-/**
- * @title DailyAffirmation
- * @notice Combines daily ERC20 rewards with an NFT mint of the affirmation.
- * Enforces a small ETH fee and backend signature verification (FID-based) to prevent bots.
- */
 contract DailyAffirmation is ERC721URIStorage, Ownable, ReentrancyGuard {
     using ECDSA for bytes32;
     using MessageHashUtils for bytes32;
     using SafeERC20 for IERC20;
 
-    // --- State Variables ---
-
+   
     uint256 private _nextTokenId;
 
     // Configuration
@@ -30,20 +24,16 @@ contract DailyAffirmation is ERC721URIStorage, Ownable, ReentrancyGuard {
     uint256 public fee; // Anti-bot fee (e.g., 0.0000030 ether)
     uint256 public claimInterval = 24 hours;
 
-    // FID => last claim timestamp
     mapping(uint256 => uint256) public lastClaim;
     
-    // Track used signatures to prevent replay attacks
+    mapping(uint256 => uint256) public streaks;
+    
     mapping(bytes32 => bool) public usedSignatures;
-
-    // --- Events ---
 
     event Claimed(uint256 indexed fid, address indexed recipient, uint256 amount, uint256 tokenId);
     event ConfigUpdated(string param, uint256 newValue);
     event ConfigUpdatedAddress(string param, address newValue);
     event EmergencyWithdraw(address indexed token, uint256 amount);
-
-    // --- Errors ---
 
     error InvalidSigner();
     error InvalidRecipient();
@@ -89,7 +79,6 @@ contract DailyAffirmation is ERC721URIStorage, Ownable, ReentrancyGuard {
         if (recipient == address(0)) revert InvalidRecipient();
         if (block.timestamp > deadline) revert SignatureExpired();
 
-        // 1. Verify Daily Limit
         uint256 lastClaimTime = lastClaim[fid];
         if (block.timestamp < lastClaimTime + claimInterval) {
             revert ClaimTooSoon(lastClaimTime + claimInterval - block.timestamp);
@@ -115,6 +104,14 @@ contract DailyAffirmation is ERC721URIStorage, Ownable, ReentrancyGuard {
 
         // 3. Update State
         usedSignatures[messageHash] = true;
+        
+        // Update streak: if claimed within 48 hours, continue streak; otherwise reset
+        if (lastClaimTime > 0 && block.timestamp < lastClaimTime + (2 * claimInterval)) {
+            streaks[fid]++;
+        } else {
+            streaks[fid] = 1;
+        }
+        
         lastClaim[fid] = block.timestamp;
         uint256 tokenId = _nextTokenId++;
 
@@ -143,7 +140,27 @@ contract DailyAffirmation is ERC721URIStorage, Ownable, ReentrancyGuard {
         return nextClaimTime - block.timestamp;
     }
 
-    // --- Admin Functions ---
+    /**
+     * @notice Get user profile including streak and claim status.
+     * @param fid The Farcaster ID of the user.
+     * @return currentStreak The user's current streak count.
+     * @return lastClaimTime The timestamp of the user's last claim.
+     * @return canClaimNow Whether the user can claim right now.
+     * @return timeUntilClaim Seconds until next claim is available (0 if can claim now).
+     */
+
+    function getUserProfile(uint256 fid) external view returns (
+        uint256 currentStreak,
+        uint256 lastClaimTime,
+        bool canClaimNow,
+        uint256 timeUntilClaim
+    ) {
+        currentStreak = streaks[fid];
+        lastClaimTime = lastClaim[fid];
+        uint256 nextClaimTime = lastClaimTime + claimInterval;
+        canClaimNow = block.timestamp >= nextClaimTime;
+        timeUntilClaim = canClaimNow ? 0 : nextClaimTime - block.timestamp;
+    }
 
     function setFee(uint256 _fee) external onlyOwner {
         fee = _fee;
@@ -172,17 +189,11 @@ contract DailyAffirmation is ERC721URIStorage, Ownable, ReentrancyGuard {
         emit ConfigUpdatedAddress("rewardToken", _token);
     }
 
-    /**
-     * @notice Withdraw collected ETH fees.
-     */
     function withdrawEther() external onlyOwner {
         (bool success, ) = owner().call{value: address(this).balance}("");
         require(success, "Withdrawal failed");
     }
 
-    /**
-     * @notice Rescue or withdraw reward tokens.
-     */
     function withdrawTokens(address _token, uint256 amount) external onlyOwner {
         IERC20(_token).safeTransfer(owner(), amount);
         emit EmergencyWithdraw(_token, amount);

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { toFirstPerson } from "@/lib/affirmation";
 
 export async function GET() {
     try {
@@ -14,7 +15,11 @@ export async function GET() {
         }
 
         const data = await response.json();
-        return NextResponse.json(data);
+
+        // Transform to first person
+        return NextResponse.json({
+            affirmation: toFirstPerson(data.affirmation),
+        });
     } catch (error) {
         console.error("Affirmation fetch error:", error);
         return NextResponse.json(

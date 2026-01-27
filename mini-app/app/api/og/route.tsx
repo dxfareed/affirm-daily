@@ -1,26 +1,44 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
-import { TURRET_ROAD_BOLD_BASE64, SPACE_MONO_REGULAR_BASE64 } from './fonts';
+import { toFirstPerson } from '@/lib/affirmation';
 
 export const runtime = 'edge';
 
-function toArrayBuffer(base64: string) {
-    const binaryString = atob(base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes.buffer;
-}
+// Cache fonts at the module level for warm starts
+let cachedFonts: { turretRoad: ArrayBuffer; spaceMono: ArrayBuffer } | null = null;
 
-const turretRoadFontData = toArrayBuffer(TURRET_ROAD_BOLD_BASE64);
-const spaceMonoFontData = toArrayBuffer(SPACE_MONO_REGULAR_BASE64);
+async function loadFonts(appUrl: string) {
+    if (cachedFonts) return cachedFonts;
+
+    const [turretRes, spaceMonoRes] = await Promise.all([
+        fetch(`${appUrl}/fonts/TurretRoad-Bold.ttf`),
+        fetch(`${appUrl}/fonts/SpaceMono-Regular.ttf`),
+    ]);
+
+    cachedFonts = {
+        turretRoad: await turretRes.arrayBuffer(),
+        spaceMono: await spaceMonoRes.arrayBuffer(),
+    };
+
+    return cachedFonts;
+}
 
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
-        const affirmation = searchParams.get('affirmation') || 'You are capable of amazing things.';
+        const affirmation = toFirstPerson(searchParams.get('affirmation') || 'I am capable of amazing things.');
         const date = searchParams.get('date') || 'today';
+
+        // Derive app URL from request
+        let appUrl = process.env.NEXT_PUBLIC_URL || process.env.VERCEL_URL || '';
+        if (!appUrl) {
+            const url = new URL(request.url);
+            appUrl = `${url.protocol}//${url.host}`;
+        } else if (!appUrl.startsWith('http')) {
+            appUrl = `https://${appUrl}`;
+        }
+
+        const fonts = await loadFonts(appUrl);
 
         const response = new ImageResponse(
             (
@@ -61,13 +79,13 @@ export async function GET(request: NextRequest) {
                 width: 1200,
                 height: 630,
                 fonts: [
-                    { name: 'Turret Road', data: turretRoadFontData, style: 'normal', weight: 700 },
-                    { name: 'Space Mono', data: spaceMonoFontData, style: 'normal', weight: 400 },
+                    { name: 'Turret Road', data: fonts.turretRoad, style: 'normal', weight: 700 },
+                    { name: 'Space Mono', data: fonts.spaceMono, style: 'normal', weight: 400 },
                 ],
             },
         );
 
-        // Add aggressive caching headers (Option 2)
+        // Aggressive caching headers
         response.headers.set('Cache-Control', 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800');
         response.headers.set('CDN-Cache-Control', 'public, max-age=86400');
         response.headers.set('Vercel-CDN-Cache-Control', 'public, max-age=86400');

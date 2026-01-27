@@ -109,7 +109,7 @@ export default function Home() {
     <main className={styles.main}>
       {/* Container z-index fix to sit above blobs */}
       <div style={{ position: 'relative', zIndex: 1, width: '100%', display: 'flex', justifyContent: 'center' }}>
-        {affirmation && <AffirmationDisplay affirmation={affirmation} isNew={isNew} />}
+        {affirmation && user && <AffirmationDisplay affirmation={affirmation} isNew={isNew} fid={user.fid} />}
       </div>
     </main>
   );
