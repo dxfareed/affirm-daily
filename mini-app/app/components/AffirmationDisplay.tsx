@@ -102,16 +102,18 @@ export function AffirmationDisplay({ affirmation, isNew, fid }: AffirmationProps
 
         setIsAffirming(true);
         try {
-            // Get signature from backend
+            // Get signature from backend (it generates NFT metadata)
             const signRes = await sdk.quickAuth.fetch('/api/claim/signature', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     fid,
                     address,
-                    tokenURI: `ipfs://affirm-daily/${fid}/${Date.now()}`, // Placeholder
+                    affirmation,
+                    streak: streak + 1, // Next streak after this claim
                 }),
             });
+
 
             if (!signRes.ok) {
                 throw new Error('Failed to get signature');

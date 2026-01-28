@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
+import { format } from 'date-fns';
 import { isAuthenticated } from '@/lib/auth';
+import { generateAffirmationSVG, uploadToPinata } from '@/lib/pinata';
 
-const PRIVATE_KEY = process.env.SIGNER_PRIVATE_KEY!;
+const PRIVATE_KEY = process.env.SERVER_SIGNER_PRIVATE_KEY!;
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_DAILY_AFFIRMATION_ADDRESS!;
 
 export async function POST(req: NextRequest) {
@@ -14,9 +16,9 @@ export async function POST(req: NextRequest) {
     const authenticatedFid = authResult;
 
     const body = await req.json();
-    const { fid, address, tokenURI } = body;
+    const { fid, address, affirmation, streak } = body;
 
-    if (!fid || !address || !tokenURI) {
+    if (!fid || !address || !affirmation) {
         return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
     }
 
@@ -24,24 +26,45 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'FID mismatch' }, { status: 403 });
     }
 
-    // 2. Prepare Signature Data
-    const deadline = Math.floor(Date.now() / 1000) + 300; // 5 minutes exp
-    const chainId = 8453;
+    try {
+        // 2. Generate NFT Image & Metadata
+        const date = format(new Date(), 'd MMM yyyy');
+        const svg = generateAffirmationSVG(affirmation, date, streak || 0);
 
-    // 3. Hash Message
-    const hash = ethers.solidityPackedKeccak256(
-        ['uint256', 'address', 'uint256', 'string', 'uint256', 'address'],
-        [fid, address, deadline, tokenURI, chainId, CONTRACT_ADDRESS]
-    );
+        const { metadataUri } = await uploadToPinata(
+            svg,
+            {
+                affirmation,
+                date,
+                streak: streak || 0,
+            },
+            fid
+        );
 
-    // 4. Sign Message
-    const wallet = new ethers.Wallet(PRIVATE_KEY);
-    const signature = await wallet.signMessage(ethers.getBytes(hash));
+        const tokenURI = metadataUri;
 
-    return NextResponse.json({
-        signature,
-        deadline,
-        tokenURI,
-        contractAddress: CONTRACT_ADDRESS
-    });
+        // 3. Prepare Signature Data
+        const deadline = Math.floor(Date.now() / 1000) + 300; // 5 minutes exp
+        const chainId = 8453;
+
+        // 4. Hash Message
+        const hash = ethers.solidityPackedKeccak256(
+            ['uint256', 'address', 'uint256', 'string', 'uint256', 'address'],
+            [fid, address, deadline, tokenURI, chainId, CONTRACT_ADDRESS]
+        );
+
+        // 5. Sign Message
+        const wallet = new ethers.Wallet(PRIVATE_KEY);
+        const signature = await wallet.signMessage(ethers.getBytes(hash));
+
+        return NextResponse.json({
+            signature,
+            deadline,
+            tokenURI,
+            contractAddress: CONTRACT_ADDRESS
+        });
+    } catch (error) {
+        console.error('[Claim Signature] Error:', error);
+        return NextResponse.json({ error: 'Failed to generate NFT metadata' }, { status: 500 });
+    }
 }

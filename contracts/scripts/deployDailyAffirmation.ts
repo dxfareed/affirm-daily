@@ -3,20 +3,18 @@ import { ethers, run } from "hardhat";
 async function main() {
     console.log("Starting deployment of DailyAffirmation...");
 
-    const rewardToken = process.env.REWARD_TOKEN_ADDRESS;
-    const signer = process.env.SIGNER_ADDRESS;
+    const rewardToken = "0xf73978b3a7d1d4974abae11f696c1b4408c027a0";
+    const signer = "0x66b4978c87C6f32eE25BDe9c49b254A242a4bD8b";
 
     if (!rewardToken || !signer) {
         throw new Error("Missing env vars: REWARD_TOKEN_ADDRESS or SIGNER_ADDRESS");
     }
 
-    // 0.0000030 ETH
-    const fee = ethers.parseEther("0.0000030");
+    // No fee - free to claim
+    const fee = ethers.parseEther("0");
 
     // Default reward: 50 tokens (assuming 18 decimals), unless specified
-    const rewardAmount = process.env.DAILY_REWARD_AMOUNT
-        ? ethers.parseUnits(process.env.DAILY_REWARD_AMOUNT, 18)
-        : ethers.parseUnits("50", 18);
+    const rewardAmount = ethers.parseUnits("10", 18);
 
     console.log("Deploying with params:");
     console.log("Reward Token:", rewardToken);
