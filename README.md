@@ -5,11 +5,13 @@ A Farcaster Mini App that delivers daily affirmations to inspire and motivate yo
 ## 📖 Overview
 
 Affirm Daily is a simple yet powerful mini-app that:
-- Delivers a **new affirmation every 24 hours**
-- Caches your daily affirmation locally (per user FID)
+- Delivers a **new affirmation every 24 hours** (personalized in first-person)
+- **Streak tracking** 🔥 - Build your daily affirmation streak
+- **NFT rewards** - Mint beautiful affirmation NFTs to your wallet
+- **Token rewards** - Earn tokens for each daily claim
 - Features a stunning **liquid glass UI** with custom typography
 - Allows **sharing to Farcaster** with beautiful OG images
-- Celebrates new affirmations with **confetti animations** 🎉
+- Celebrates with **confetti animations** 🎉
 
 ## 📁 Project Structure
 
@@ -24,7 +26,10 @@ affirm-daily/
 │   │   ├── share/             # Frame share page with metadata
 │   │   ├── components/        # React components
 │   │   └── context/           # React contexts
-│   ├── lib/                   # Utilities (auth, wagmi config)
+│   ├── lib/                   # Utilities (auth, wagmi, pinata, contract)
+│   │   ├── affirmation.ts     # First-person text transformation
+│   │   ├── contract.ts        # Contract ABI & address
+│   │   └── pinata.ts          # NFT SVG generation & IPFS upload
 │   ├── public/                # Static assets & fonts
 │   └── minikit.config.ts      # Farcaster Mini App configuration
 │
@@ -36,14 +41,19 @@ affirm-daily/
     └── scripts/               # Deployment & utility scripts
 ```
 
-## � Smart Contract Features (`DailyAffirmation.sol`)
+## 🔗 Smart Contract Features (`DailyAffirmation.sol`)
+
+**Deployed on Base:** `0xEe26a6cF0c4a46C727F6b613272d56e2e182B173`
 
 - **Daily Claims:** Enforces one claim per 24 hours per FID.
-- **Bot Prevention:** Requires `0.0000030 ETH` fee + Backend Signature verification.
+- **Streak Tracking:** Tracks consecutive daily claims (resets if you miss a day).
+- **Free Claims:** No ETH fee required (just gas).
+- **Backend Signature:** Prevents bots via FID-based signature verification.
 - **Rewards:**
-    - **ERC721 NFT:** Dynamic SVG image of the affirmation (stored securely on Pinata).
-    - **ERC20 Token:** Reward tokens sent directly to user wallet.
-- **Admin:** Fee management and emergency rescue functions.
+    - **ERC721 NFT:** Dynamic SVG image of the affirmation (stored on Pinata/IPFS).
+    - **ERC20 Token:** 10 reward tokens sent directly to user wallet.
+- **View Function:** `getUserProfile(fid)` returns streak, claim status, and timing.
+- **Admin:** Emergency rescue functions.
 
 ## �🚀 Getting Started
 
@@ -79,9 +89,13 @@ affirm-daily/
    NEXT_PUBLIC_PAYLOAD=your_payload
    NEXT_PUBLIC_SIGNATURE=your_signature
 
-   # Backend Signer & Pinata (For Daily Affirmation NFT)
-   NEXT_PUBLIC_DAILY_AFFIRMATION_ADDRESS=0x...
-   SIGNER_PRIVATE_KEY=your_private_key
+   # Smart Contract
+   NEXT_PUBLIC_DAILY_AFFIRMATION_ADDRESS=0xEe26a6cF0c4a46C727F6b613272d56e2e182B173
+   
+   # Backend Signer (for claim signature verification)
+   SERVER_SIGNER_PRIVATE_KEY=your_private_key
+   
+   # Pinata (for NFT metadata on IPFS)
    PINATA_API_KEY=your_key
    PINATA_SECRET_API_KEY=your_secret
    ```
