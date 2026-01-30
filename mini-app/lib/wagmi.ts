@@ -31,7 +31,10 @@ const connectors = connectorsForWallets(
 );
 
 export const config = createConfig({
-  connectors: [...connectors, farcasterMiniApp()],
+  connectors: [
+    ...connectors,
+    ...(typeof window !== 'undefined' ? [farcasterMiniApp()] : []),
+  ],
   chains: [base],
   transports: {
     [base.id]: http(in_rpc_url),

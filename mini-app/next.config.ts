@@ -2,9 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   transpilePackages: ['@wagmi/connectors', '@metamask/sdk'],
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // Added for Next.js 16 - allows webpack config to work alongside Turbopack
+  turbopack: {},
   webpack: (config) => {
     config.externals.push("pino-pretty", "lokijs", "encoding");
     return config;

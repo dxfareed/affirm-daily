@@ -2,14 +2,14 @@
 import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { minikitConfig } from '@/minikit.config';
-import { format } from 'date-fns';
 
-export const runtime = 'edge';
+// Removed edge runtime to reduce bundle size
 
 export async function generateMetadata(props: { searchParams: Promise<any> }): Promise<Metadata> {
     const searchParams = await props.searchParams;
     const affirmation = searchParams.affirmation;
-    const date = searchParams.date || format(new Date(), "d MMM");
+    // Use native date formatting instead of date-fns to reduce bundle size
+    const date = searchParams.date || new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
 
     let appUrl = process.env.NEXT_PUBLIC_URL || process.env.VERCEL_URL || 'http://localhost:3000';
     if (!appUrl.startsWith('http')) {
@@ -34,7 +34,7 @@ export async function generateMetadata(props: { searchParams: Promise<any> }): P
                 name: `Launch ${minikitConfig.frame.name}`,
                 type: "launch_frame",
                 url: appUrl,
-                splashImageUrl: `${appUrl}/icon.png`,
+                splashImageUrl: `${appUrl}/logo1.jpg`,
                 splashBackgroundColor: "#06b6d4",
             },
         },
