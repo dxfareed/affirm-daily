@@ -1,22 +1,23 @@
 import PinataSDK from '@pinata/sdk';
+import { Readable } from 'stream';
 
 const pinata = new PinataSDK(
-    process.env.PINATA_API_KEY!,
-    process.env.PINATA_SECRET_API_KEY!
+  process.env.PINATA_API_KEY!,
+  process.env.PINATA_SECRET_API_KEY!
 );
 
 /**
  * Generate an SVG image for the affirmation NFT
  */
 export function generateAffirmationSVG(affirmation: string, date: string, streak: number): string {
-    // Escape special characters for XML
-    const escapedAffirmation = affirmation
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+  // Escape special characters for XML
+  const escapedAffirmation = affirmation
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 
-    return `<svg width="600" height="600" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg">
+  return `<svg width="600" height="600" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#ecfeff"/>
@@ -66,43 +67,44 @@ export function generateAffirmationSVG(affirmation: string, date: string, streak
  * Upload content to Pinata IPFS
  */
 export async function uploadToPinata(
-    svgContent: string,
-    metadata: object,
-    fid: number
+  svgContent: string,
+  metadata: object,
+  fid: number
 ): Promise<{ imageUri: string; metadataUri: string }> {
-    const timestamp = Date.now();
+  const timestamp = Date.now();
 
-    // Upload SVG image
-    const imageResult = await pinata.pinJSONToIPFS(
-        {
-            type: 'svg',
-            content: svgContent
-        },
-        {
-            pinataMetadata: { name: `affirm-daily-${fid}-${timestamp}-image` }
-        }
-    );
-    const imageUri = `ipfs://${imageResult.IpfsHash}`;
+  // Upload SVG image as file (not JSON) for proper rendering
+  const stream = Readable.from([svgContent]);
+  // @ts-ignore - Add path for Pinata to detect file type
+  stream.path = `affirmation-${fid}-${timestamp}.svg`;
 
-    // Create and upload metadata
-    const nftMetadata = {
-        name: `Affirm Daily #${fid}-${timestamp}`,
-        description: "A daily affirmation NFT from Affirm Daily",
-        image: imageUri,
-        ...metadata,
-        attributes: [
-            { trait_type: "Type", value: "Daily Affirmation" },
-            { trait_type: "FID", value: fid },
-            ...(metadata as any).attributes || []
-        ]
-    };
+  const imageResult = await pinata.pinFileToIPFS(
+    stream,
+    {
+      pinataMetadata: { name: `affirm-daily-${fid}-${timestamp}-image.svg` }
+    }
+  );
+  const imageUri = `ipfs://${imageResult.IpfsHash}`;
 
-    const metadataResult = await pinata.pinJSONToIPFS(nftMetadata, {
-        pinataMetadata: { name: `affirm-daily-${fid}-${timestamp}-metadata` }
-    });
+  // Create and upload metadata
+  const nftMetadata = {
+    name: `Affirm Daily #${fid}-${timestamp}`,
+    description: "A daily affirmation NFT from Affirm Daily",
+    image: imageUri,
+    ...metadata,
+    attributes: [
+      { trait_type: "Type", value: "Daily Affirmation" },
+      { trait_type: "FID", value: fid },
+      ...(metadata as any).attributes || []
+    ]
+  };
 
-    return {
-        imageUri,
-        metadataUri: `ipfs://${metadataResult.IpfsHash}`
-    };
+  const metadataResult = await pinata.pinJSONToIPFS(nftMetadata, {
+    pinataMetadata: { name: `affirm-daily-${fid}-${timestamp}-metadata` }
+  });
+
+  return {
+    imageUri,
+    metadataUri: `ipfs://${metadataResult.IpfsHash}`
+  };
 }

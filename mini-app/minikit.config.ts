@@ -6,13 +6,13 @@ const ROOT_URL = process.env.NEXT_PUBLIC_URL || process.env.VERCEL_URL;
  * @see {@link https://miniapps.farcaster.xyz/docs/guides/publishing}
  */
 export const minikitConfig = {
-  /* accountAssociation: {
+  accountAssociation: {
     header: process.env.NEXT_PUBLIC_HEADER,
     payload: process.env.NEXT_PUBLIC_PAYLOAD,
     signature: process.env.NEXT_PUBLIC_SIGNATURE,
-  }, */
+  },
   "baseBuilder": {
-    "allowedAddresses": [process.env.NEXT_PUBLIC_BASEBUILDER_ALLOWED_ADDRESS || ''],
+    "allowedAddresses": ['0x68E11220a2229e8D135e758Fb1EA1D843a1C3855'],
   },
   frame: {
     version: "1",

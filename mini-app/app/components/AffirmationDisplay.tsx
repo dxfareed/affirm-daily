@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Copy, Share2, Sparkles, Flame } from "lucide-react";
+import { Copy, Share2, Sparkles, Flame, Loader2 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { format } from "date-fns";
 import { sdk } from "@farcaster/miniapp-sdk";
@@ -18,7 +18,8 @@ interface AffirmationProps {
 export function AffirmationDisplay({ affirmation, isNew, fid }: AffirmationProps) {
     const today = format(new Date(), "d MMM");
     const [copied, setCopied] = useState(false);
-    const [isAffirming, setIsAffirming] = useState(false);
+    const [claimStatus, setClaimStatus] = useState<'idle' | 'sharing' | 'generating' | 'signing' | 'mining' | 'success'>('idle');
+    const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
 
     const { address, isConnected } = useAccount();
 
@@ -37,9 +38,9 @@ export function AffirmationDisplay({ affirmation, isNew, fid }: AffirmationProps
         functionName: 'fee',
     });
 
-    const { writeContract, data: txHash, isPending } = useWriteContract();
+    const { writeContractAsync } = useWriteContract();
 
-    const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+    const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
         hash: txHash,
     });
 
@@ -60,7 +61,8 @@ export function AffirmationDisplay({ affirmation, isNew, fid }: AffirmationProps
     }, [isNew]);
 
     useEffect(() => {
-        if (isSuccess) {
+        if (isConfirmed && claimStatus !== 'success') {
+            setClaimStatus('success');
             confetti({
                 particleCount: 150,
                 spread: 100,
@@ -68,9 +70,13 @@ export function AffirmationDisplay({ affirmation, isNew, fid }: AffirmationProps
                 colors: ["#06b6d4", "#fcd34d", "#ffffff"],
             });
             refetchProfile();
-            setIsAffirming(false);
+            // Reset after celebration
+            setTimeout(() => {
+                setClaimStatus('idle');
+                setTxHash(undefined);
+            }, 3000);
         }
-    }, [isSuccess, refetchProfile]);
+    }, [isConfirmed, claimStatus, refetchProfile]);
 
     const handleCopy = () => {
         navigator.clipboard.writeText(affirmation);
@@ -78,31 +84,36 @@ export function AffirmationDisplay({ affirmation, isNew, fid }: AffirmationProps
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const handleShare = () => {
-        const shareText = `"${affirmation}" - My daily affirmation.`;
-        const appUrl = process.env.NEXT_PUBLIC_URL || window.location.origin;
-        const shareUrl = new URL(`${appUrl}/share`);
-        shareUrl.searchParams.set('affirmation', affirmation);
-        shareUrl.searchParams.set('date', today);
-
-        if (sdk && sdk.actions && sdk.actions.composeCast) {
-            try {
-                sdk.actions.composeCast({
-                    text: shareText,
-                    embeds: [shareUrl.toString()],
-                });
-            } catch (e) {
-                console.error("Error sharing:", e);
-            }
-        }
-    };
-
-    const handleAffirm = async () => {
+    const handleShareAndClaim = async () => {
         if (!isConnected || !address || !canClaim) return;
 
-        setIsAffirming(true);
         try {
-            // Get signature from backend (it generates NFT metadata)
+            // Step 1: Share to Farcaster
+            setClaimStatus('sharing');
+            const shareText = `"${affirmation}" - My daily affirmation.`;
+            const appUrl = process.env.NEXT_PUBLIC_URL || window.location.origin;
+            const shareUrl = new URL(`${appUrl}/share`);
+            shareUrl.searchParams.set('affirmation', affirmation);
+            shareUrl.searchParams.set('date', today);
+
+            if (!sdk?.actions?.composeCast) {
+                throw new Error('Farcaster SDK not available');
+            }
+
+            const result = await sdk.actions.composeCast({
+                text: shareText,
+                embeds: [shareUrl.toString()],
+            });
+
+            // Check if user actually published the cast
+            if (!result?.cast) {
+                // User cancelled the share
+                setClaimStatus('idle');
+                return;
+            }
+
+            // Step 2: Generate NFT metadata
+            setClaimStatus('generating');
             const signRes = await sdk.quickAuth.fetch('/api/claim/signature', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -110,28 +121,33 @@ export function AffirmationDisplay({ affirmation, isNew, fid }: AffirmationProps
                     fid,
                     address,
                     affirmation,
-                    streak: streak + 1, // Next streak after this claim
+                    streak: streak + 1,
                 }),
             });
 
-
             if (!signRes.ok) {
-                throw new Error('Failed to get signature');
+                throw new Error('Failed to generate NFT metadata');
             }
 
             const { signature, deadline, tokenURI } = await signRes.json();
 
-            // Call contract
-            writeContract({
+            // Step 3: Sign transaction
+            setClaimStatus('signing');
+            const hash = await writeContractAsync({
                 address: DAILY_AFFIRMATION_ADDRESS,
                 abi: DAILY_AFFIRMATION_ABI,
                 functionName: 'claim',
                 args: [BigInt(fid), address, BigInt(deadline), tokenURI, signature as `0x${string}`],
                 value: fee || BigInt(0),
             });
+
+            // Step 4: Wait for mining
+            setClaimStatus('mining');
+            setTxHash(hash);
+
         } catch (e) {
-            console.error('Affirm error:', e);
-            setIsAffirming(false);
+            console.error('Share & Claim error:', e);
+            setClaimStatus('idle');
         }
     };
 
@@ -150,14 +166,37 @@ export function AffirmationDisplay({ affirmation, isNew, fid }: AffirmationProps
     ogParams.append('v', '3');
     const ogUrl = `${appUrl}/api/og?${ogParams.toString()}`;
 
-    const isButtonDisabled = !isConnected || !canClaim || isPending || isConfirming || isAffirming;
+    const isButtonDisabled = !isConnected || !canClaim || claimStatus !== 'idle';
 
     const getButtonText = () => {
         if (!isConnected) return 'Connect Wallet';
-        if (isPending || isConfirming || isAffirming) return 'Affirming...';
+        if (claimStatus === 'sharing') return 'Opening composer...';
+        if (claimStatus === 'generating') return 'Creating your NFT...';
+        if (claimStatus === 'signing') return 'Check your wallet...';
+        if (claimStatus === 'mining') return 'Minting on Base...';
+        if (claimStatus === 'success') return 'Claimed! ✅';
         if (!canClaim) return `Wait ${formatTimeRemaining(timeUntilClaim)}`;
-        return 'Affirm ✨';
+        return 'Share & Affirm ✨';
     };
+
+    const getStatusMessage = () => {
+        switch (claimStatus) {
+            case 'sharing':
+                return { icon: Share2, text: 'Share your affirmation to Farcaster', color: '#06b6d4' };
+            case 'generating':
+                return { icon: Sparkles, text: 'Generating your unique NFT artwork', color: '#0891b2' };
+            case 'signing':
+                return { icon: Sparkles, text: 'Please confirm the transaction', color: '#0e7490' };
+            case 'mining':
+                return { icon: Loader2, text: 'Minting your affirmation on Base', color: '#155e75' };
+            case 'success':
+                return { icon: Sparkles, text: 'Successfully claimed!', color: '#10b981' };
+            default:
+                return null;
+        }
+    };
+
+    const statusInfo = getStatusMessage();
 
     return (
         <div className={styles.container}>
@@ -189,29 +228,36 @@ export function AffirmationDisplay({ affirmation, isNew, fid }: AffirmationProps
                     >
                         <Copy className={`${styles.icon} ${copied ? styles.copied : ''}`} />
                     </button>
-
-                    <button
-                        onClick={handleShare}
-                        className={styles.button}
-                        title="Share"
-                    >
-                        <Share2 className={styles.icon} />
-                    </button>
                 </div>
 
-                {/* Affirm Button */}
+                {/* Status Card - Shows during claim process */}
+                {statusInfo && claimStatus !== 'idle' && (
+                    <div className={styles.statusCard}>
+                        <statusInfo.icon
+                            className={`${styles.statusIcon} ${claimStatus === 'mining' || claimStatus === 'generating' ? styles.spinning : ''}`}
+                            style={{ color: statusInfo.color }}
+                        />
+                        <p className={styles.statusText}>{statusInfo.text}</p>
+                    </div>
+                )}
+
+                {/* Share & Affirm Button */}
                 <button
-                    onClick={handleAffirm}
+                    onClick={handleShareAndClaim}
                     disabled={isButtonDisabled}
-                    className={`${styles.affirmButton} ${isButtonDisabled ? styles.affirmButtonDisabled : ''}`}
+                    className={`${styles.affirmButton} ${isButtonDisabled ? styles.affirmButtonDisabled : ''} ${claimStatus !== 'idle' ? styles.affirmButtonLoading : ''}`}
                 >
-                    <Sparkles className={styles.sparkleIcon} />
+                    {claimStatus !== 'idle' && claimStatus !== 'success' && (
+                        <Loader2 className={styles.buttonSpinner} />
+                    )}
+                    {claimStatus === 'success' && <Sparkles className={styles.sparkleIcon} />}
+                    {claimStatus === 'idle' && <Sparkles className={styles.sparkleIcon} />}
                     {getButtonText()}
                 </button>
             </div>
 
             <p className={styles.footer}>
-                {canClaim ? 'Affirm daily to build your streak!' : `Check back in ${formatTimeRemaining(timeUntilClaim)} for a new affirmation.`}
+                {canClaim ? 'Share your affirmation to claim rewards!' : `Check back in ${formatTimeRemaining(timeUntilClaim)} for a new affirmation.`}
             </p>
 
             {/* Hidden image to preload OG image cache */}
