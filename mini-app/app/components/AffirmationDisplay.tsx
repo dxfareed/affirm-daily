@@ -84,13 +84,32 @@ export function AffirmationDisplay({ affirmation, isNew, fid }: AffirmationProps
         setTimeout(() => setCopied(false), 2000);
     };
 
+    const handleShare = () => {
+        const shareText = `"${affirmation}" - My daily affirmation.`;
+        const appUrl = process.env.NEXT_PUBLIC_URL || window.location.origin;
+        const shareUrl = new URL(`${appUrl}/share`);
+        shareUrl.searchParams.set('affirmation', affirmation);
+        shareUrl.searchParams.set('date', today);
+
+        if (sdk && sdk.actions && sdk.actions.composeCast) {
+            try {
+                sdk.actions.composeCast({
+                    text: shareText,
+                    embeds: [shareUrl.toString()],
+                });
+            } catch (e) {
+                console.error("Error sharing:", e);
+            }
+        }
+    };
+
     const handleShareAndClaim = async () => {
         if (!isConnected || !address || !canClaim) return;
 
         try {
             // Step 1: Share to Farcaster
             setClaimStatus('sharing');
-            const shareText = `"${affirmation}" - My daily affirmation.`;
+            const shareText = `"${affirmation}" - My daily affirmation.\n\nI also claimed some goodies after I affirmed ✨`;
             const appUrl = process.env.NEXT_PUBLIC_URL || window.location.origin;
             const shareUrl = new URL(`${appUrl}/share`);
             shareUrl.searchParams.set('affirmation', affirmation);
@@ -176,7 +195,7 @@ export function AffirmationDisplay({ affirmation, isNew, fid }: AffirmationProps
         if (claimStatus === 'mining') return 'Minting on Base...';
         if (claimStatus === 'success') return 'Claimed! ✅';
         if (!canClaim) return `Wait ${formatTimeRemaining(timeUntilClaim)}`;
-        return 'Share & Affirm ✨';
+        return 'Affirm ✨';
     };
 
     const getStatusMessage = () => {
@@ -227,6 +246,14 @@ export function AffirmationDisplay({ affirmation, isNew, fid }: AffirmationProps
                         title="Copy to clipboard"
                     >
                         <Copy className={`${styles.icon} ${copied ? styles.copied : ''}`} />
+                    </button>
+
+                    <button
+                        onClick={handleShare}
+                        className={styles.button}
+                        title="Share"
+                    >
+                        <Share2 className={styles.icon} />
                     </button>
                 </div>
 
